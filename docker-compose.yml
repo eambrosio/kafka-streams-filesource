@@ -1,0 +1,95 @@
+#
+# Copyright (C) Spotahome SL - All Rights Reserved
+# This file can only be stored on servers belonging to Spotahome S.L.
+# Unauthorized copying of this file, via any medium is strictly prohibited Proprietary and confidential
+#
+
+version: '2.1'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_LOG4J_ROOT_LOGLEVEL: 'ERROR'
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: 'ERROR'
+
+  kafka:
+    image: confluentinc/cp-enterprise-kafka
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG4J_ROOT_LOGLEVEL: 'ERROR'
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: 'ERROR'
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: kafka:9092
+      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    volumes:
+      - ./logs:/usr/share/logs
+
+
+
+  schema_registry:
+    image: confluentinc/cp-schema-registry
+    hostname: schema_registry
+    depends_on:
+      - zookeeper
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema_registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: 'GET,POST,PUT,OPTIONS'
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: '*'
+      SCHEMA_LOG4J_ROOT_LOGLEVEL: 'ERROR'
+      SCHEMA_TOOLS_LOG4J_LOGLEVEL: 'ERROR'
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: "none"
+
+#  schema_registry_ui:
+#      image: landoop/schema-registry-ui
+#      hostname: schema_registry_ui
+#      depends_on:
+#        - schema_registry
+#      ports:
+#        - "8000:8000"
+#      environment:
+#        SCHEMAREGISTRY_URL: 'http://schema_registry:8081'
+#        PROXY: "true"
+#
+#
+
+  log-parser:
+    image: kafka-streams-log-parser:0.1.0-SNAPSHOT
+    hostname: log-parser
+    depends_on:
+      - kafka
+
+
+#
+#  agent1:
+#    image: dist.spotahome.net:5000/data/data-uw-cluster-agent:0.0.1-SNAPSHOT
+#    environment:
+#      CLUSTER_SEED_NODES_0: akka.tcp://underworld@localhost:2552
+#      PROMETHEUS_EMBEDDED_PORT_AGENT: 9097
+#      AGENT_REMOTE_NETTY_TCP_PORT: 2554
+#    network_mode: "host"
+#    ports:
+#      - "9097:9097"
+#      - "2554:2554"
